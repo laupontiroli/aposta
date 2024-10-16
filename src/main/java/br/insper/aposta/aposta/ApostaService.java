@@ -44,7 +44,7 @@ public class ApostaService {
     }
 
 
-    @KafkaListener(topics = "apostas")
+    @KafkaListener(topics = "partidas")
     public void atualizaApostas(RetornarPartidaDTO dto) {
         // Busca todas as apostas no banco de dados
         List<Aposta> apostas = apostaRepository.findByPartida(dto.getId());
