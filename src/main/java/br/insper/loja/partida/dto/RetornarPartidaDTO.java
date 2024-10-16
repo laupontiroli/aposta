@@ -1,4 +1,4 @@
-package br.insper.aposta.partida;
+package br.insper.loja.partida.dto;
 
 import lombok.Getter;
 import lombok.Setter;

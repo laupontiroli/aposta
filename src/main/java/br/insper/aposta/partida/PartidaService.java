@@ -1,5 +1,6 @@
 package br.insper.aposta.partida;
 
+import br.insper.loja.partida.dto.RetornarPartidaDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
