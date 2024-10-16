@@ -6,6 +6,7 @@ import br.insper.aposta.partida.PartidaService;
 import br.insper.loja.partida.dto.RetornarPartidaDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -42,6 +43,48 @@ public class ApostaService {
         return apostaRepository.findAll();
     }
 
+
+    @KafkaListener(topics = "apostas")
+    public void atualizaApostas(RetornarPartidaDTO dto) {
+        // Busca todas as apostas no banco de dados
+        List<Aposta> apostas = apostaRepository.findByPartida(dto.getId());
+
+        for (Aposta aposta : apostas) {
+            try {
+                // Obtém a partida associada à aposta
+                ResponseEntity<RetornarPartidaDTO> partida = partidaService.getPartida(aposta.getIdPartida());
+
+                if (partida.getStatusCode().is2xxSuccessful()) {
+                    RetornarPartidaDTO partidaDTO = partida.getBody();
+
+                    // Verifica se a partida já foi realizada
+                    if (partidaDTO.getStatus().equals("REALIZADA")) {
+                        // Atualiza o status da aposta conforme o resultado da partida
+                        if (aposta.getResultado().equals("EMPATE") && partidaDTO.isEmpate()) {
+                            aposta.setStatus("GANHOU");
+                        } else if (aposta.getResultado().equals("VITORIA_MANDANTE") && partidaDTO.isVitoriaMandante()) {
+                            aposta.setStatus("GANHOU");
+                        } else if (aposta.getResultado().equals("VITORIA_VISITANTE") && partidaDTO.isVitoriaVisitante()) {
+                            aposta.setStatus("GANHOU");
+                        } else {
+                            aposta.setStatus("PERDEU");
+                        }
+
+                        // Salva a aposta atualizada no banco de dados
+                        apostaRepository.save(aposta);
+                    } else {
+                        throw new PartidaNaoRealizadaException("Partida não realizada");
+                    }
+                } else {
+                    throw new PartidaNaoEncontradaException("Partida não encontrada");
+                }
+            } catch (Exception e) {
+                // Trate a exceção de forma apropriada, log ou outras ações
+                System.err.println("Erro ao atualizar aposta: " + e.getMessage());
+            }
+        }
+    }
+
     public Aposta getAposta(String idAposta) {
 
         Optional<Aposta> op = apostaRepository.findById(idAposta);
@@ -52,40 +95,7 @@ public class ApostaService {
 
         Aposta aposta = op.get();
 
-        if (!aposta.getStatus().equals("REALIZADA")) {
-            return aposta;
-        }
-
-        ResponseEntity<RetornarPartidaDTO> partida = partidaService.getPartida(aposta.getIdPartida());
-
-        if (partida.getStatusCode().is2xxSuccessful())  {
-            RetornarPartidaDTO partidaDTO = partida.getBody();
-
-            if (partidaDTO.getStatus().equals("REALIZADA")) {
-
-                if (aposta.getResultado().equals("EMPATE") && partidaDTO.isEmpate()) {
-                    aposta.setStatus("GANHOU");
-                }
-
-                if (aposta.getResultado().equals("VITORIA_MANDANTE") && partidaDTO.isVitoriaMandante()) {
-                    aposta.setStatus("GANHOU");
-                }
-
-                if (aposta.getResultado().equals("EMPATE") && partidaDTO.isVitoriaVisitante()) {
-                    aposta.setStatus("GANHOU");
-                }
-
-                if (aposta.getStatus().equals("REALIZADA")) {
-                    aposta.setStatus("PERDEU");
-                }
-            } else {
-                throw new PartidaNaoRealizadaException("Partida não realizada");
-            }
-            return apostaRepository.save(aposta);
-
-        } else {
-            throw new PartidaNaoEncontradaException("Partida não encontrada");
-        }
+        return aposta;
 
     }
 }

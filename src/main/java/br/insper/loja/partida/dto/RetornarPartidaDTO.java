@@ -11,6 +11,7 @@ public class RetornarPartidaDTO {
     private Integer placarMandante;
     private Integer placarVisitante;
     private String status;
+    private Integer id;
 
     public boolean isEmpate() {
         return placarMandante == placarVisitante;
